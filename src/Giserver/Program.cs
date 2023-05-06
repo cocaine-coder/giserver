@@ -5,10 +5,14 @@ using Giserver.Services;
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.Logging.AddConsole();
 
-builder.Services.AddSingleton<ZipService>();
+
+var services = builder.Services;
+services.AddSingleton<SlpkService>();
+services.AddScoped<IConfigServcie, ConfigService>();
 
 var app = builder.Build();
 
+app.UseStaticFiles();
 app.MapSlpkEndpoint();
 app.Run();
 

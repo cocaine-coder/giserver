@@ -1,0 +1,85 @@
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>IntegratedMeshLayer | Sample | ArcGIS Maps SDK for JavaScript 4.26</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.26/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.26/"></script>
+
+    <style>
+        html,
+        body,
+        #viewDiv {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        #menu {
+            padding: 1em;
+        }
+    </style>
+
+    <script>
+        require([
+            "esri/Map",
+            "esri/WebScene",
+            "esri/geometry/SpatialReference",
+            "esri/views/SceneView",
+            "esri/views/MapView",
+            "esri/layers/IntegratedMeshLayer",
+            "esri/widgets/LayerList",
+            "esri/widgets/Legend"
+        ], (
+            Map,
+            WebScene,
+            SpatialReference,
+            SceneView,
+            MapView,
+            IntegratedMeshLayer,
+            LayerList,
+            Legend
+        ) => {
+
+            /*************************************
+             * Load webscene with other layers
+             * (lakes, points of interest, roads)
+             *************************************/
+            // Create Map
+            const map = new Map({
+            });
+
+            /*************************************
+             * Create IntegratedMeshLayer layer
+             * and add it to the webscene
+             ***********************************/
+            const layer = new IntegratedMeshLayer({
+                url: "http://localhost:5000/slpk/1/SceneServer/layers/0",
+            });
+
+            map.add(layer);
+
+            const view = new SceneView({
+                container: "viewDiv",
+                map: map,
+                qualityProfile: "high",
+                spatialReference: new SpatialReference({
+                    wkid: 4528
+                })
+            });
+
+            setTimeout(() => { view.extent = layer.fullExtent; }, 5000)
+        });
+
+    </script>
+</head>
+
+<body>
+    <div id="viewDiv">
+    </div>
+</body>
+
+</html>

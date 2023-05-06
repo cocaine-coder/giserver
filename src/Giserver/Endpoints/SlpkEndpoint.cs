@@ -8,38 +8,38 @@ public static class SlpkEndpoint
     {
         prefix = prefix ?? "" + "/slpk";
 
-        var group = app.MapGroup(prefix + "/{resourceId}/SceneServer/layers/0");
+        var group = app.MapGroup(prefix + "/{resourceId}/SceneServer/layers/0")!;
 
-        group.MapGet("/", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId, string? relativePath) =>
+        group.MapGet("/", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string? relativePath) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
             if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
 
-            var buffer = await zipService.ReadFileAsync(path, relativePath ?? "" + "3dSceneLayer.json.gz");
-            if (buffer == null) return Results.NotFound($"scene layer document read error");
+            var buffer = await slpkService.ReadFileAsync(path, relativePath ?? "" + "3dSceneLayer.json", dir);
+            if (buffer == null) return Results.NotFound();
 
             context.Response.Headers.Add("Content-Encoding", "gzip");
             return Results.Bytes(buffer, "application/json");
         }).WithTags("3DSceneLayer");
 
-        group.MapGet("/nodepages/{nodePageID}", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId, string nodePageID) =>
+        group.MapGet("/nodepages/{nodePageID}", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string nodePageID) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
-            if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
+            if (string.IsNullOrEmpty(path)) return Results.NotFound();
 
-            var buffer = await zipService.ReadFileAsync(path, $"nodepages/{nodePageID}.json.gz");
-            if (buffer == null) return Results.NotFound($"node page : ({nodePageID}) read error");
+            var buffer = await slpkService.ReadFileAsync(path, $"nodepages/{nodePageID}.json", dir);
+            if (buffer == null) return Results.NotFound();
 
             context.Response.Headers.Add("Content-Encoding", "gzip");
             return Results.Bytes(buffer, "application/json");
         }).WithTags("nodePage");
 
-        group.MapGet("/nodes/{nodeID}/textures/{textureID}", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId, string nodeID, string textureID) =>
+        group.MapGet("/nodes/{nodeID}/textures/{textureID}", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string nodeID, string textureID) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
-            if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
+            if (string.IsNullOrEmpty(path)) return Results.NotFound();
 
-            var buffer = await zipService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.bin.dds.gz");
+            var buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.bin.dds", dir);
             if (buffer != null)
             {
                 context.Response.Headers.Add("Content-Encoding", "gzip");
@@ -47,89 +47,83 @@ public static class SlpkEndpoint
             }
             else
             {
-                buffer = await zipService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.jpg")
-                    ?? await zipService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.png")
-                    ?? await zipService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.bin");
+                buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.jpg", dir)
+                    ?? await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.png", dir)
+                    ?? await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.bin", dir);
 
-                if (buffer != null)
-                {
-                    return Results.Bytes(buffer, "image/jpeg");
-                }
-                else
-                {
-                    return Results.NotFound();
-                }
+                context.Response.Headers.Add("Content-Encoding", "gzip");
+                return buffer != null ? Results.Bytes(buffer, "image/jpeg") : Results.NotFound();
             }
         });
 
-        group.MapGet("/nodes/{nodeID}/geometries/{geometryID}", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId, string nodeID, string geometryID) =>
+        group.MapGet("/nodes/{nodeID}/geometries/{geometryID}", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string nodeID, string geometryID) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
-            if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
+            if (string.IsNullOrEmpty(path)) return Results.NotFound();
 
-            var buffer = await zipService.ReadFileAsync(path, $"nodes/{nodeID}/geometries/{geometryID}.bin.gz");
-            if (buffer == null) return Results.NotFound($"geometry : ({geometryID}) read error");
+            var buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/geometries/{geometryID}.bin", dir);
+            if (buffer == null) return Results.NotFound();
 
             context.Response.Headers.Add("Content-Encoding", "gzip");
 
             return Results.Bytes(buffer, "application/octet-stream; charset=binary");
         });
 
-        group.MapGet("/nodes/{nodeID}/attributes/f_{attributeID}/0", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId, string nodeID, string attributeID) =>
+        group.MapGet("/nodes/{nodeID}/attributes/f_{attributeID}/0", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string nodeID, string attributeID) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
-            if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
+            if (string.IsNullOrEmpty(path)) return Results.NotFound();
 
-            var buffer = await zipService.ReadFileAsync(path, $"nodes/{nodeID}/attributes/f_{attributeID}/0.bin.gz");
-            if (buffer == null) return Results.NotFound($"attribute : ({attributeID}) read error");
+            var buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/attributes/f_{attributeID}/0.bin", dir);
+            if (buffer == null) return Results.NotFound();
 
             context.Response.Headers.Add("Content-Encoding", "gzip");
             return Results.Bytes(buffer, "application/octet-stream; charset=binary");
         });
 
-        group.MapGet("/nodes/{nodeID}/shared", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId, string nodeID) =>
+        group.MapGet("/nodes/{nodeID}/shared", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string nodeID) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
-            if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
+            if (string.IsNullOrEmpty(path)) return Results.NotFound();
 
-            var buffer = await zipService.ReadFileAsync(path, $"nodes/{nodeID}/shared/sharedResource.json.gz");
-            if (buffer == null) return Results.NotFound($"shared : nodeId ({nodeID}) read error");
+            var buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/shared/sharedResource.json", dir);
+            if (buffer == null) return Results.NotFound();
 
             context.Response.Headers.Add("Content-Encoding", "gzip");
             return Results.Bytes(buffer, "application/json");
         });
 
-        group.MapGet("/nodes/{nodeID}", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId, string nodeID) =>
+        group.MapGet("/nodes/{nodeID}", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string nodeID) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
-            if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
+            if (string.IsNullOrEmpty(path)) return Results.NotFound();
 
-            var buffer = await zipService.ReadFileAsync(path, $"nodes/{nodeID}/3dNodeIndexDocument.json.gz");
-            if (buffer == null) return Results.NotFound($"3D node index document : nodeId ({nodeID}) read error");
+            var buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/3dNodeIndexDocument.json", dir);
+            if (buffer == null) return Results.NotFound();
 
             context.Response.Headers.Add("Content-Encoding", "gzip");
             return Results.Bytes(buffer, "application/json");
         });
 
-        group.MapGet("/statistics/f_{attributeID}/0", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId, string attributeID) =>
+        group.MapGet("/statistics/f_{attributeID}/0", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string attributeID) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
-            if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
+            if (string.IsNullOrEmpty(path)) return Results.NotFound();
 
-            var buffer = await zipService.ReadFileAsync(path, $"statistics/f_{attributeID}/0.json.gz");
-            if (buffer == null) return Results.NotFound($"statistics : ({attributeID}) read error");
+            var buffer = await slpkService.ReadFileAsync(path, $"statistics/f_{attributeID}/0.json", dir);
+            if (buffer == null) return Results.NotFound();
 
             context.Response.Headers.Add("Content-Encoding", "gzip");
             return Results.Bytes(buffer, "application/json");
         });
 
-        group.MapGet("/statistics/summary", async (HttpContext context, IConfiguration configuration, ZipService zipService, string resourceId) =>
+        group.MapGet("/statistics/summary", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId) =>
         {
-            var path = configuration.GetValue<string>($"Slpk:{resourceId}:Path");
-            if (string.IsNullOrEmpty(path)) return Results.NotFound($"resource id : {resourceId} not found");
+            var (path, dir) = await configServcie.GetSlpkPathAsync(resourceId);
+            if (string.IsNullOrEmpty(path)) return Results.NotFound();
 
-            var buffer = await zipService.ReadFileAsync(path, "/statistics/summary.json.gz");
-            if (buffer == null) return Results.NotFound($"statistics summary document read error");
+            var buffer = await slpkService.ReadFileAsync(path, "/statistics/summary.json", dir);
+            if (buffer == null) return Results.NotFound();
 
             context.Response.Headers.Add("Content-Encoding", "gzip");
             return Results.Bytes(buffer, "application/json");
@@ -161,5 +155,4 @@ public static class SlpkEndpoint
     {
         return app;
     }
-
 }
