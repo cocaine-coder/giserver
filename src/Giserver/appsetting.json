@@ -1,0 +1,6 @@
+{
+    "ConnectionStrings": {
+        "GeoTemplate": "Host=192.168.2.100;Port=54322;UserId=test;Password=123456;Database={0}"
+    },
+    "Slpk": {}
+}

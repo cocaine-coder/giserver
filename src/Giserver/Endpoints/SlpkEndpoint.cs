@@ -43,17 +43,23 @@ public static class SlpkEndpoint
             if (buffer != null)
             {
                 context.Response.Headers.Add("Content-Encoding", "gzip");
-                return Results.Bytes(buffer, "application/octet-stream; charset=binary");
+                return Results.Bytes(buffer, "application/octet-stream;charset=binary");
             }
-            else
-            {
-                buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.jpg", dir)
-                    ?? await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.png", dir)
-                    ?? await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.bin", dir);
 
+            buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.ktx2", dir);
+            if (buffer != null)
+            {
                 context.Response.Headers.Add("Content-Encoding", "gzip");
-                return buffer != null ? Results.Bytes(buffer, "image/jpeg") : Results.NotFound();
+                return Results.Bytes(buffer, "application/octet-stream;charset=binary");
             }
+
+            buffer = await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.jpg", dir)
+                ?? await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.png", dir)
+                ?? await slpkService.ReadFileAsync(path, $"nodes/{nodeID}/textures/{textureID}.bin", dir);
+
+            context.Response.Headers.Add("Content-Encoding", "gzip");
+            return buffer != null ? Results.Bytes(buffer, "image/jpeg") : Results.NotFound();
+
         });
 
         group.MapGet("/nodes/{nodeID}/geometries/{geometryID}", async (HttpContext context, IConfigServcie configServcie, SlpkService slpkService, string resourceId, string nodeID, string geometryID) =>

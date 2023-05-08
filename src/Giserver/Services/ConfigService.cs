@@ -9,7 +9,7 @@ public class ConfigService : IConfigServcie
 {
     public Task<(string? path, bool dir)> GetSlpkPathAsync(string resourceId)
     {
-        //return Task.FromResult((@"G:\demo\i3s-spec\slpks\integrated", true));
-        return Task.FromResult((@"G:\demo\TEMP", true));
+        //return Task.FromResult((@"Z:\temp\test.slpk", false));
+        return Task.FromResult((@"Z:\temp\test", true));
     }
 }
