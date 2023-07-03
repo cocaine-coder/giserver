@@ -1,20 +1,49 @@
-using Npgsql.GeoQuery.Extensions;
-
-using Giserver.Endpoints;
-using Giserver.Services;
-
 var builder = WebApplication.CreateSlimBuilder(args);
-var configuration = builder.Configuration;
-configuration.AddJsonFile("appsetting.json");
-
+var isDev = builder.Environment.IsDevelopment();
 var services = builder.Services;
-services.AddScoped<IConfigServcie, ConfigService>();
-services.AddSingleton<SlpkService>();
+var configuration = builder.Configuration;
+configuration.AddJsonFile($"appsetting.{(isDev ? "dev." : "")}json");
+
 services.AddGeoQuery();
+services.AddSingleton<SlpkService>();
+services.AddFastEndpoints();
+
+services.AddOptions<Dictionary<string, SlpkConfig>>("Slpk");
+
+if (isDev)
+{
+    services.SwaggerDocument(o =>
+    {
+        o.TagCase = TagCase.LowerCase;
+        o.ShortSchemaNames = true;
+        o.SerializerSettings = settings =>
+        {
+            settings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        };
+        o.DocumentSettings = settings =>
+        {
+            settings.TypeMappers.AddGeometry(GeoSerializeType.Geojson);
+        };
+    });
+}
 
 var app = builder.Build();
 
 app.UseStaticFiles();
-app.MapSlpkEndpoint();
-app.UseGeoQuery(builder.Configuration.GetConnectionString("GeoTemplate")!, "api/geo");
+
+app.UseSlpkEndpoints();
+app.UseGeoQuery(configuration.GetConnectionString("GeoTemplate")!, "api/vector", routeHandlerBuilder =>
+{
+    routeHandlerBuilder.WithTags("vector");
+});
+app.UseFastEndpoints(config =>
+{
+    config.Endpoints.RoutePrefix = "api";
+    config.Serializer.Options.Converters.Add(new GeoJsonConverterFactory());
+});
+
+if (isDev)
+{
+    app.UseSwaggerGen();
+}
 app.Run();

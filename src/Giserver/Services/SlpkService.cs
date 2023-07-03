@@ -1,12 +1,21 @@
-using System.IO.Compression;
-
 namespace Giserver.Services;
 
 public class SlpkService
 {
+    private readonly Dictionary<string, SlpkConfig> _slpkConfig;
 
-    public async Task<byte[]?> ReadFileAsync(string path, string relativePath, bool dir, CancellationToken cancellationToken = default)
+    public SlpkService(IOptions<Dictionary<string, SlpkConfig>> options)
     {
+        this._slpkConfig = options.Value;
+    }
+
+    public async Task<byte[]?> ReadFileAsync(string resourceId, string relativePath, CancellationToken cancellationToken = default)
+    {
+        if (!_slpkConfig.TryGetValue(resourceId, out var result))
+            return null;
+
+        var (path, dir) = result;
+
         if (dir)
         {
             var filePath = Path.Combine(path, relativePath);
